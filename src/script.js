@@ -1,6 +1,6 @@
 import './style.css'
 import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js'
 import * as dat from 'lil-gui'
 
 /**
@@ -19,24 +19,36 @@ const scene = new THREE.Scene()
  * Galaxy
  */
 
+let geometry = null
+let material = null
+let points = null
+
 const parameters = {}
 parameters.count = 1000
 parameters.size = 0.02
+parameters.radius = 5
+parameters.branches = 3
+parameters.spin = 1
 
-const generateGalaxy = () =>
-{
+const generateGalaxy = () => {
+    // Destroy old galaxy
+    if (points !== null) {
+        geometry.dispose()
+        material.dispose()
+        scene.remove(points)
+    }
+
     /**
      * Geometry
      */
-    const geometry = new THREE.BufferGeometry()
+    geometry = new THREE.BufferGeometry()
 
     const positions = new Float32Array(parameters.count * 3)
 
-    for(let i = 0; i < parameters.count; i++)
-    {
+    for (let i = 0; i < parameters.count; i++) {
         const i3 = i * 3
 
-        positions[i3    ] = (Math.random() - 0.5) * 3
+        positions[i3] = (Math.random() - 0.5) * 3
         positions[i3 + 1] = (Math.random() - 0.5) * 3
         positions[i3 + 2] = (Math.random() - 0.5) * 3
     }
@@ -46,7 +58,7 @@ const generateGalaxy = () =>
     /**
      * Material
      */
-    const material = new THREE.PointsMaterial({
+    material = new THREE.PointsMaterial({
         size: parameters.size,
         sizeAttenuation: true,
         depthWrite: false,
@@ -56,11 +68,50 @@ const generateGalaxy = () =>
     /**
      * Points
      */
-    const points = new THREE.Points(geometry, material)
+    points = new THREE.Points(geometry, material)
     scene.add(points)
+
+    for (let i = 0; i < parameters.count; i++) {
+        const i3 = i * 3
+
+        const radius = Math.random() * parameters.radius
+
+        positions[i3] = radius
+        positions[i3 + 1] = 0
+        positions[i3 + 2] = 0
+    }
+
+    for (let i = 0; i < parameters.count; i++) {
+        const i3 = i * 3
+
+        const radius = Math.random() * parameters.radius
+        const branchAngle = (i % parameters.branches) / parameters.branches * Math.PI * 2
+
+        positions[i3] = Math.cos(branchAngle) * radius
+        positions[i3 + 1] = 0
+        positions[i3 + 2] = Math.sin(branchAngle) * radius
+    }
+
+    for (let i = 0; i < parameters.count; i++) {
+        const i3 = i * 3
+
+        const radius = Math.random() * parameters.radius
+        const spinAngle = radius * parameters.spin
+        const branchAngle = (i % parameters.branches) / parameters.branches * Math.PI * 2
+
+        positions[i3] = Math.cos(branchAngle + spinAngle) * radius
+        positions[i3 + 1] = 0
+        positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius
+    }
 }
 
 generateGalaxy()
+
+gui.add(parameters, 'count').min(100).max(1000000).step(100).onFinishChange(generateGalaxy)
+gui.add(parameters, 'size').min(0.001).max(0.1).step(0.001).onFinishChange(generateGalaxy)
+gui.add(parameters, 'radius').min(0.01).max(20).step(0.01).onFinishChange(generateGalaxy)
+gui.add(parameters, 'branches').min(2).max(20).step(1).onFinishChange(generateGalaxy)
+gui.add(parameters, 'spin').min(-5).max(5).step(0.001).onFinishChange(generateGalaxy)
 
 /**
  * Sizes
@@ -70,8 +121,7 @@ const sizes = {
     height: window.innerHeight
 }
 
-window.addEventListener('resize', () =>
-{
+window.addEventListener('resize', () => {
     // Update sizes
     sizes.width = window.innerWidth
     sizes.height = window.innerHeight
@@ -113,8 +163,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
  */
 const clock = new THREE.Clock()
 
-const tick = () =>
-{
+const tick = () => {
     const elapsedTime = clock.getElapsedTime()
 
     // Update controls
